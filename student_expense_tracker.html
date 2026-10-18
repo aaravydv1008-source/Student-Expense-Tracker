@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Student Expense Tracker</title>
+<style>
+:root{--navy:#173b67;--blue:#2d6cdf;--bg:#f3f6fb;--text:#172033;--muted:#65728a;--green:#16835f;--red:#c33b48}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
+header{background:linear-gradient(135deg,#173b67,#2d6cdf);color:white;padding:28px 18px}
+.wrap{max-width:900px;margin:auto}
+header h1{margin:0 0 8px;font-size:clamp(25px,5vw,36px)}
+header p{margin:0;opacity:.9}
+main{max-width:900px;margin:22px auto;padding:0 14px 36px}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
+.card,.panel{background:white;border-radius:16px;padding:18px;box-shadow:0 4px 16px #203b6410}
+.card span{display:block;color:var(--muted);font-size:13px;margin-bottom:10px}
+.card strong{font-size:clamp(20px,4vw,28px);overflow-wrap:anywhere}
+.income{color:var(--green)}.expense{color:var(--red)}.balance{color:var(--navy)}
+.panel{margin-bottom:18px}
+h2{font-size:19px;margin:0 0 14px}
+form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+label{display:block;font-size:13px;font-weight:bold;color:var(--muted);margin-bottom:6px}
+input,select,button{font:inherit;width:100%;padding:12px;border:1px solid #d8e0ec;border-radius:10px;background:white}
+button{border:0;background:var(--blue);color:white;font-weight:bold;cursor:pointer}
+button:hover{filter:brightness(.96)}
+.full{grid-column:1/-1}
+.tools{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.tools button{width:auto}
+.secondary{background:#e7eefb;color:var(--navy)}
+.danger{background:#fff0f0;color:var(--red)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:11px 8px;border-bottom:1px solid #edf0f5}
+th{color:var(--muted);font-size:12px}
+.empty{text-align:center;color:var(--muted);padding:22px}
+.small{font-size:12px;color:var(--muted);line-height:1.5}
+.amount{white-space:nowrap;font-weight:bold}
+.delete{padding:7px 9px;width:auto;background:#fff0f0;color:var(--red);font-size:12px}
+@media(max-width:600px){.cards{grid-template-columns:1fr;gap:9px}.card{padding:14px}.card span{margin-bottom:5px}form{grid-template-columns:1fr}.full{grid-column:auto}.panel{padding:15px}.table-scroll{overflow-x:auto}table{min-width:560px}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+<h1>Student Expense Tracker</h1>
+<p>Manage your money smartly. Track income, daily expenses, and savings.</p>
+</div></header>
+<main>
+<section class="cards">
+<div class="card"><span>Total Income</span><strong class="income" id="totalIncome">₹0.00</strong></div>
+<div class="card"><span>Total Expenses</span><strong class="expense" id="totalExpense">₹0.00</strong></div>
+<div class="card"><span>Available Balance</span><strong class="balance" id="balance">₹0.00</strong></div>
+</section>
+<section class="panel">
+<h2>Add a transaction</h2>
+<form id="transactionForm">
+<div><label for="type">Transaction type</label><select id="type"><option value="income">Income / Credit</option><option value="expense">Expense</option></select></div>
+<div><label for="amount">Amount (₹)</label><input id="amount" type="number" min="0.01" step="0.01" placeholder="e.g. 500" required></div>
+<div><label for="category">Category</label><select id="category"><option>Allowance</option><option>Scholarship</option><option>Food</option><option>Travel</option><option>Books & Study</option><option>College Fees</option><option>Mobile & Internet</option><option>Other</option></select></div>
+<div><label for="date">Date</label><input id="date" type="date" required></div>
+<div class="full"><label for="description">Description</label><input id="description" type="text" maxlength="100" placeholder="e.g. Bus fare, lunch, pocket money"></div>
+<div class="full"><button type="submit">+ Add transaction</button></div>
+</form>
+</section>
+<section class="panel">
+<h2>Transaction history</h2>
+<div class="tools"><button class="secondary" id="exportBtn" type="button">Download CSV</button><button class="danger" id="clearBtn" type="button">Clear all data</button></div>
+<div class="table-scroll"><table><thead><tr><th>Date</th><th>Type</th><th>Category</th><th>Description</th><th>Amount</th><th>Action</th></tr></thead><tbody id="rows"></tbody></table></div>
+<div class="empty" id="empty">No transactions yet. Add your first income or expense above.</div>
+<p class="small">Your entries are saved in this browser on this device. Download a CSV backup regularly. Clearing browser data or using another device may remove or not show these entries.</p>
+</section>
+</main>
+<script>
+const key='studentExpenseTrackerTransactions_v1';
+let transactions=[];
+try{transactions=JSON.parse(localStorage.getItem(key)||'[]');if(!Array.isArray(transactions))transactions=[]}catch(e){transactions=[]}
+const money=n=>new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR'}).format(n);
+const $=id=>document.getElementById(id);
+$('date').value=new Date().toISOString().slice(0,10);
+function save(){localStorage.setItem(key,JSON.stringify(transactions));render()}
+function render(){
+ const income=transactions.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+ const expense=transactions.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+ $('totalIncome').textContent=money(income);$('totalExpense').textContent=money(expense);$('balance').textContent=money(income-expense);
+ $('rows').innerHTML='';
+ $('empty').style.display=transactions.length?'none':'block';
+ [...transactions].sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id).forEach(t=>{
+  const tr=document.createElement('tr');
+  const vals=[t.date,t.type==='income'?'Income':'Expense',t.category,t.description||'—'];
+  vals.forEach(v=>{const td=document.createElement('td');td.textContent=v;tr.appendChild(td)});
+  const amount=document.createElement('td');amount.className='amount '+(t.type==='income'?'income':'expense');amount.textContent=(t.type==='income'?'+':'−')+money(t.amount);tr.appendChild(amount);
+  const action=document.createElement('td');const btn=document.createElement('button');btn.className='delete';btn.textContent='Delete';btn.onclick=()=>{if(confirm('Delete this transaction?')){transactions=transactions.filter(x=>x.id!==t.id);save()}};action.appendChild(btn);tr.appendChild(action);$('rows').appendChild(tr);
+ });
+}
+$('transactionForm').addEventListener('submit',e=>{
+ e.preventDefault();const amount=Number($('amount').value);if(!Number.isFinite(amount)||amount<=0){alert('Please enter an amount greater than zero.');return}
+ transactions.push({id:Date.now(),type:$('type').value,amount,category:$('category').value,date:$('date').value,description:$('description').value.trim()});
+ save();$('amount').value='';$('description').value='';
+});
+$('clearBtn').onclick=()=>{if(confirm('This will delete all transactions saved in this browser. Continue?')){transactions=[];save()}};
+$('exportBtn').onclick=()=>{
+ const data=[['Date','Type','Category','Description','Amount'],...transactions.map(t=>[t.date,t.type,t.category,t.description,t.amount])];
+ const csv=data.map(row=>row.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');
+ const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='student-expense-tracker.csv';a.click();URL.revokeObjectURL(url);
+};
+render();
+</script>
+</body>
+</html>
